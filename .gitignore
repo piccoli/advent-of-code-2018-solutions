@@ -1,0 +1,5 @@
+*_files/
+*.html
+*.png
+*.mp4
+__pycache__
