@@ -1,8 +1,13 @@
 #! /usr/bin/env python3
-import sys, re, time
+import sys
 
 import operator
 from functools import wraps
+
+def log(*args, **kwargs):
+    print(*args, **kwargs, flush = True, file = sys.stderr)
+
+log = lambda *args, **kwargs: None
 
 class Machine:
     def __init__(self, program_text, values = [ 0, 0, 0, 0, 0, 0 ]):
@@ -56,16 +61,16 @@ class Machine:
             if self.ip_bound is not None:
                 self.register[self.ip_bound] = self.ip
 
-            print('ip={:3d} {:4s} {:10d} {:10d} {:10d}'.format(
+            log('ip={:3d} {:4s} {:10d} {:10d} {:10d}'.format(
                 self.ip,
                 op.__name__, a, b, c
-            ), end = '', flush = True, file = sys.stderr)
+            ), end = '')
 
             op(self, a, b, c)
 
-            print(' -> [ {} ]'.format(
+            log(' -> [ {} ]'.format(
                 ' '.join('{:11d}'.format(r) for r in self.register)
-            ), flush = True, file = sys.stderr)
+            ))
 
             if self.ip_bound is not None:
                 self.ip = self.register[self.ip_bound]
@@ -164,12 +169,14 @@ class Machine:
 
         return self.register
 
-program_text = sys.stdin.read()
+if __name__ == '__main__':
+    program_text = sys.stdin.read()
 
-try:
-    r0 = int(sys.argv[1])
-except:
-    r0 = 0
+    try:
+        r0 = int(sys.argv[1])
+    except:
+        r0 = 0
 
-machine = Machine(program_text, values = [ r0, 0, 0, 0, 0, 0 ])
-machine.run()
+    machine = Machine(program_text, values = [ r0, 0, 0, 0, 0, 0 ])
+    machine.run()
+    print(machine.register[0])
