@@ -1,36 +1,43 @@
 #! /usr/bin/env python3
+from collections import deque
 
 def highest_score(number_of_players, last_marble):
-    score       = [ 0 for _ in range(number_of_players) ]
-    circle      = [ 0 ]
-    next_number = 0
-    current     = 0
-    turn        = 0
+    score = [ 0 for _ in range(number_of_players) ]
+    circle = deque([ 0 ])
 
-    #print_turn(turn - 1, circle, current)
+    next_number = 0
+    turn        = 0
+    rotation    = 0
+
+    print_turn(turn - 1, circle, rotation)
     while next_number != last_marble:
         next_number += 1
 
         if next_number % 23 != 0:
-            current = (current + 1) % len(circle) + 1
-
-            circle.insert(current, next_number)
+            circle.rotate(-1)
+            circle.append(next_number)
+            rotation = (rotation + 2) % len(circle)
         else:
             score[turn] += next_number
 
-            current = (current - 7) % len(circle)
+            circle.rotate(7)
 
-            removed = circle.pop(current)
-            score[turn] += removed
+            score[turn] += circle.pop()
 
-            current = current % len(circle)
+            circle.rotate(-1)
+            rotation = (rotation - 5) % len(circle)
 
-        #print_turn(turn, circle, current)
+        print_turn(turn, circle, rotation)
         turn = (turn + 1) % number_of_players
 
     return max(score)
 
-def print_turn(turn, circle, current):
+def print_turn(turn, circle, rotation = 0):
+    circle = deque(circle)
+    circle.rotate(rotation)
+
+    current = (len(circle) - 1 + rotation) % len(circle)
+
     print('\033[1;37m[{}]\033[0m {}'.format(
         '-' if turn == -1 else turn + 1,
         ' '.join(

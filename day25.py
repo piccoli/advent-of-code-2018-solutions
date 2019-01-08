@@ -29,9 +29,6 @@ class Constellations:
             self.id[j] = i
             self.sz[i] += self.sz[j]
 
-    def connected(self, r, s):
-        return self.root(r) == self.root(s)
-
 def read_input():
     spacetime = set()
 

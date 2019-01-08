@@ -11,25 +11,6 @@ else:
     NumberOfWorkers = 5
     MinimumCompletionTime = 60
 
-def read_step_dependencies():
-    before = {}
-    after  = {}
-
-    for line in sys.stdin.readlines():
-        record = line.split()
-
-        u, v = record[1], record[7]
-
-        if u not in after: after[u] = set()
-        if v not in after: after[v] = set()
-        after[u].add(v)
-
-        if u not in before: before[u] = set()
-        if v not in before: before[v] = set()
-        before[v].add(u)
-
-    return before, after
-
 def ordered_steps(after):
     steps_in_order = deque()
     placed = set()
@@ -49,49 +30,70 @@ def ordered_steps(after):
 
     return ''.join(steps_in_order)
 
-before, after = read_step_dependencies()
+def makespan(before, after):
+    available_steps = [ b for b in before if not before[b] ]
+    available_workers = NumberOfWorkers
+    current_time = 0
+    schedule = []
 
-print(ordered_steps(after))
+    heapify(available_steps)
 
-current_time = 0
-available_steps = [ b for b in before if not before[b] ]
-available_workers = NumberOfWorkers
-schedule = []
+    def completion_time(step):
+        return MinimumCompletionTime + ord(step) - ord('A') + 1
 
-heapify(available_steps)
+    def next_task():
+        step = heappop(available_steps)
+        finish_by = current_time + completion_time(step)
 
-def completion_time(step):
-    return MinimumCompletionTime + ord(step) - ord('A') + 1
+        return (finish_by, step)
 
-def next_task():
-    step = heappop(available_steps)
-    finish_by = current_time + completion_time(step)
+    def allocate_workers():
+        nonlocal available_workers
 
-    return (finish_by, step)
+        while available_steps and available_workers:
+            available_workers -= 1
+            heappush(schedule, next_task())
 
-def allocate_workers():
-    global available_workers
-
-    while available_steps and available_workers:
-        available_workers -= 1
-        heappush(schedule, next_task())
-
-def execute_tasks():
-    global current_time, available_workers
-
-    allocate_workers()
-
-    while schedule:
-        current_time, step = heappop(schedule)
-
-        available_workers += 1
-        for s in after[step]:
-            before[s].remove(step)
-            if not before[s]:
-                heappush(available_steps, s)
+    def execute_tasks():
+        nonlocal current_time, available_workers
 
         allocate_workers()
 
-execute_tasks()
+        while schedule:
+            current_time, step = heappop(schedule)
 
-print(current_time)
+            available_workers += 1
+            for s in after[step]:
+                before[s].remove(step)
+                if not before[s]:
+                    heappush(available_steps, s)
+
+            allocate_workers()
+
+    execute_tasks()
+
+    return current_time
+
+def read_step_dependencies():
+    before = {}
+    after  = {}
+
+    for line in sys.stdin.readlines():
+        record = line.split()
+
+        u, v = record[1], record[7]
+
+        if u not in after: after[u] = set()
+        if v not in after: after[v] = set()
+        after[u].add(v)
+
+        if u not in before: before[u] = set()
+        if v not in before: before[v] = set()
+        before[v].add(u)
+
+    return before, after
+
+before, after = read_step_dependencies()
+
+print(ordered_steps(after))
+print(makespan(before, after))

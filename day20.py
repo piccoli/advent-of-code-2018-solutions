@@ -5,16 +5,15 @@ from collections import deque
 def longest_paths(floorplan, root):
     distance = { root: 0 }
 
-    q = deque([ (0, root) ])
+    q = deque([ root ])
 
-    while len(distance) < len(floorplan):
-        dist, node = q.popleft()
-        dist += 1
+    while q:
+        node = q.popleft()
 
         for adjacent in floorplan[node]:
-            if adjacent not in distance or dist < distance[adjacent]:
-                distance[adjacent] = dist
-                q.append((dist, adjacent))
+            if adjacent not in distance:
+                distance[adjacent] = distance[node] + 1
+                q.append(adjacent)
 
     return max(distance.values()),\
            sum(d >= 1000 for d in distance.values())

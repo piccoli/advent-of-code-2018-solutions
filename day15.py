@@ -71,12 +71,12 @@ class Unit(Thing):
         ux, uy = self.x, self.y
 
         parent = { (uy, ux): None }
-        cost   = { (uy, ux): 0    }
+        seen   = { (uy, ux) }
 
-        q = deque([ (cost[uy, ux], uy, ux) ])
+        q = deque([ (uy, ux) ])
 
         while q:
-            c, y, x = q.popleft()
+            y, x = q.popleft()
 
             if (y, x) in targets:
                 while parent[y, x] is not None and parent[y, x] != (uy, ux):
@@ -85,11 +85,11 @@ class Unit(Thing):
                 return x, y
 
             for ry, rx in self.board[y, x].range():
-                if (ry, rx) not in cost or c + 1 < cost[ry, rx]:
-                    cost[ry, rx] = c + 1
+                if (ry, rx) not in seen:
+                    seen.add((ry, rx))
                     parent[ry, rx] = y, x
 
-                    q.append((cost[ry, rx], ry, rx))
+                    q.append((ry, rx))
 
         return None, None
 

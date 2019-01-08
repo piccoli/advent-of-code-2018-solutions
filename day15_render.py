@@ -9,7 +9,7 @@ import time, curses
 Wait  = .05
 Sleep = True
 
-UNKNOWN, RANGE, REACHABLE, NEAREST, CHOSEN, EMPTY, WALL, ELF, GOBLIN, HIT = '*?@!+.#EGX'
+UNKNOWN, SEEN, RANGE, REACHABLE, NEAREST, CHOSEN, EMPTY, WALL, ELF, GOBLIN, HIT = '*^?@!+.#EGX'
 
 Symbol = dict(
     Thing  = UNKNOWN,
@@ -77,34 +77,34 @@ class Unit(Thing):
 
         chosen = { (uy, ux): self.symbol.lower() }
         parent = { (uy, ux): None }
-        cost   = { (uy, ux): 0    }
+        seen   = { (uy, ux): SEEN }
 
-        q = deque([ (cost[uy, ux], uy, ux) ])
+        q = deque([ (uy, ux) ])
 
         while q:
-            c, y, x = q.popleft()
+            y, x = q.popleft()
 
-            draw_board(self.board, targets, cost, chosen, wait = 0)
+            draw_board(self.board, targets, seen, chosen, wait = 0)
 
             if (y, x) in targets:
                 chosen[y, x] = CHOSEN
 
-                draw_board(self.board, targets, cost, chosen, wait = .05)
+                draw_board(self.board, targets, seen, chosen, wait = .05)
 
                 while parent[y, x] is not None and parent[y, x] != (uy, ux):
                     y, x = parent[y, x]
                     chosen[y, x] = NEAREST
 
-                    draw_board(self.board, targets, cost, chosen, wait = .0005)
+                    draw_board(self.board, targets, seen, chosen, wait = .0005)
 
                 return x, y
 
             for ry, rx in self.board[y, x].range():
-                if (ry, rx) not in cost or c + 1 < cost[ry, rx]:
-                    cost[ry, rx] = c + 1
+                if (ry, rx) not in seen:
+                    seen[ry, rx] = SEEN
                     parent[ry, rx] = y, x
 
-                    q.append((cost[ry, rx], ry, rx))
+                    q.append((ry, rx))
 
         return None, None
 
@@ -136,7 +136,7 @@ class Unit(Thing):
         for enemy in my_enemies:
             if not enemy.is_dead:
                 targets.update({
-                    (y, x): '?' for y, x in enemy.range()
+                    (y, x): RANGE for y, x in enemy.range()
                 })
 
         if not targets:
@@ -304,7 +304,7 @@ def draw_board(board, *overlays, wait = Wait, move_to_top = True):
         tile = overlaid_board[y, x]
         if tile == HIT:
             curses.flash()
-        elif isinstance(tile, int):
+        elif tile == SEEN:
             tile = str(board[y, x])
 
         screen.addstr(
@@ -321,6 +321,7 @@ def draw_board(board, *overlays, wait = Wait, move_to_top = True):
 
 color_map = {
     UNKNOWN  : (8, 0),
+    SEEN     : (7, curses.A_BOLD),
     RANGE    : (2, 0),
     REACHABLE: (3, 0),
     NEAREST  : (5, curses.A_STANDOUT),
@@ -335,9 +336,6 @@ color_map = {
 }
 
 def color(k):
-    if isinstance(k, int):
-        return curses.color_pair(7) | curses.A_BOLD
-
     if k not in color_map:
         return curses.color_pair(8)
 
@@ -378,6 +376,8 @@ def print_info(screen, *info, wait = 0):
         screen.addstr('\n{}\n'.format(text))
 
     screen.refresh()
-    time.sleep(wait)
+
+    if wait > 0:
+        time.sleep(wait)
 
 curses.wrapper(main)

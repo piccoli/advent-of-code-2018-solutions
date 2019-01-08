@@ -2,12 +2,11 @@
 import sys
 
 import operator
-from functools import wraps
+from functools import wraps, partial
 
-def log(*args, **kwargs):
-    print(*args, **kwargs, flush = True, file = sys.stderr)
-
-log = lambda *args, **kwargs: None
+verbose = len(sys.argv) > 1 and sys.argv[1] == '--verbose'
+log = partial(print, flush = True, file = sys.stderr) if verbose\
+    else (lambda *a, **k: None)
 
 class Machine:
     def __init__(self, program_text, values = [ 0, 0, 0, 0, 0, 0 ]):
@@ -179,4 +178,5 @@ if __name__ == '__main__':
 
     machine = Machine(program_text, values = [ r0, 0, 0, 0, 0, 0 ])
     machine.run()
+
     print(machine.register[0])

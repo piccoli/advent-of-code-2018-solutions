@@ -11,6 +11,36 @@ DoorColor = (105, 173, 255)
 RoomSize  = 8
 WallGap   = 2
 
+def longest_paths(floorplan, root):
+    x0 = min(x for y, x in floorplan)
+    y0 = min(y for y, x in floorplan)
+    x1 = max(x for y, x in floorplan)
+    y1 = max(y for y, x in floorplan)
+
+    w, h = x1 - x0 + 2, y1 - y0 + 2
+
+    four_cc = cv2.VideoWriter_fourcc(*'MP42')
+    video = cv2.VideoWriter('output.avi', four_cc, 120.0, (w * RoomSize, h * RoomSize))
+
+    distance = { root: 0 }
+
+    q = deque([ root ])
+
+    while q:
+        node = q.popleft()
+
+        for adjacent in floorplan[node]:
+            if adjacent not in distance:
+                distance[adjacent] = distance[node] + 1
+                q.append(adjacent)
+
+        video.write(render_frame(floorplan, distance, x0, y0, w, h))
+
+    video.release()
+
+    return max(distance.values()),\
+           sum(d >= 1000 for d in distance.values())
+
 def render_frame(floorplan, distance, x0, y0, w, h):
     im = np.zeros((h * RoomSize, w * RoomSize, 3), np.uint8)
 
@@ -69,37 +99,6 @@ def render_frame(floorplan, distance, x0, y0, w, h):
         draw_object_given[(y    , x + 1) in edges](x + 1, y    , dy = 1)
 
     return im
-
-def longest_paths(floorplan, root):
-    x0 = min(x for y, x in floorplan)
-    y0 = min(y for y, x in floorplan)
-    x1 = max(x for y, x in floorplan)
-    y1 = max(y for y, x in floorplan)
-
-    w, h = x1 - x0 + 2, y1 - y0 + 2
-
-    four_cc = cv2.VideoWriter_fourcc(*'MP42')
-    video = cv2.VideoWriter('output.avi', four_cc, 120.0, (w * RoomSize, h * RoomSize))
-
-    distance = { root: 0 }
-
-    q = deque([ (0, root) ])
-
-    while len(distance) < len(floorplan):
-        dist, node = q.popleft()
-        dist += 1
-
-        for adjacent in floorplan[node]:
-            if adjacent not in distance or dist < distance[adjacent]:
-                distance[adjacent] = dist
-                q.append((dist, adjacent))
-
-        video.write(render_frame(floorplan, distance, x0, y0, w, h))
-
-    video.release()
-
-    return max(distance.values()),\
-           sum(d >= 1000 for d in distance.values())
 
 stack     = []
 floorplan = {}

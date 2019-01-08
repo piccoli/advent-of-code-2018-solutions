@@ -1,4 +1,4 @@
-#! /usr/bin/python3 -OO
+#! /usr/bin/env python3
 import sys, re
 from functools import partial
 

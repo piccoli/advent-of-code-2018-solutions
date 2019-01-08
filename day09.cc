@@ -52,8 +52,8 @@ int main(void) {
 
     auto const record = split(line);
 
-    size_t const number_of_players = stoi(record.front());
-    long long const last_marble = stoll(*(record.end() - 2));
+    size_t const number_of_players = stoi(record[0]);
+    long long const last_marble = stoll(record[6]);
 
     cout << highest_score(number_of_players, last_marble      ) << endl;
     cout << highest_score(number_of_players, last_marble * 100) << endl;

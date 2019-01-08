@@ -11,22 +11,36 @@ X, Y = range(2)
 DistanceThreshold = 32 if len(sys.argv) > 1 and sys.argv[1] == '--test'\
                else 10000
 
-def read():
-    seeds = []
-    for line in sys.stdin.readlines():
-        x, y = map(int, line.split(','))
+def max_area(seeds, labels):
+    count = { l: 0 for l in range(len(seeds)) }
+    infinite = set()
 
-        seeds.append((x, y))
+    for j in range(x1, x2 + 1):
+        infinite.add(labels[y1, j])
+        infinite.add(labels[y2, j])
 
-    x1 = min(s[X] for s in seeds)
-    y1 = min(s[Y] for s in seeds)
-    x2 = max(s[X] for s in seeds)
-    y2 = max(s[Y] for s in seeds)
+    for i in range(y1, y2 + 1):
+        infinite.add(labels[i, x1])
+        infinite.add(labels[i, x2])
 
-    return seeds, x1, y1, x2, y2
+    for i, j in product(
+            range(y1, y2 + 1),
+            range(x1, x2 + 1)):
+        l = labels[i, j]
+        if l not in infinite:
+            count[l] += 1
 
-def distance(x1, y1, x2, y2):
-    return abs(x2 - x1) + abs(y2 - y1)
+    return max(count.values())
+
+def closest_area(seeds):
+    return sum(
+        sum(distance(x, y, i, j) for x, y in seeds) < DistanceThreshold
+
+        for i, j in product(
+            range(y1, y2 + 1),
+            range(x1, x2 + 1)
+        )
+    )
 
 def assign_labels(seeds, x1, y1, x2, y2):
     dist = {
@@ -60,36 +74,22 @@ def assign_labels(seeds, x1, y1, x2, y2):
 
     return labels
 
-def max_area(seeds, labels):
-    count = { l: 0 for l in range(len(seeds)) }
-    infinite = set()
+def distance(x1, y1, x2, y2):
+    return abs(x2 - x1) + abs(y2 - y1)
 
-    for j in range(x1, x2 + 1):
-        infinite.add(labels[y1, j])
-        infinite.add(labels[y2, j])
+def read_areas():
+    seeds = []
+    for line in sys.stdin.readlines():
+        x, y = map(int, line.split(','))
 
-    for i in range(y1, y2 + 1):
-        infinite.add(labels[i, x1])
-        infinite.add(labels[i, x2])
+        seeds.append((x, y))
 
-    for i, j in product(
-            range(y1, y2 + 1),
-            range(x1, x2 + 1)):
-        l = labels[i, j]
-        if l not in infinite:
-            count[l] += 1
+    x1 = min(s[X] for s in seeds)
+    y1 = min(s[Y] for s in seeds)
+    x2 = max(s[X] for s in seeds)
+    y2 = max(s[Y] for s in seeds)
 
-    return max(count.values())
-
-def closest_area(seeds):
-    return sum(
-        sum(distance(x, y, i, j) for x, y in seeds) < DistanceThreshold
-
-        for i, j in product(
-            range(y1, y2 + 1),
-            range(x1, x2 + 1)
-        )
-    )
+    return seeds, x1, y1, x2, y2
 
 def render(seeds, labels):
     out = np.zeros((y2 - y1 + 1, x2 - x1 + 1, 3), np.uint8)
@@ -108,7 +108,7 @@ def render(seeds, labels):
 
     cv2.imwrite('output.png', out)
 
-seeds, x1, y1, x2, y2 = read()
+seeds, x1, y1, x2, y2 = read_areas()
 
 labels = assign_labels(seeds, x1, y1, x2, y2)
 

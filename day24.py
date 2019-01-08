@@ -2,17 +2,16 @@
 import sys, re, math
 
 from copy import deepcopy
+from functools import partial
+
+verbose = len(sys.argv) > 1 and sys.argv[1] == '--verbose'
+log = partial(print, flush = True, file = sys.stderr) if verbose\
+    else (lambda *a, **k: None)
 
 AttackTypes = Slashing, Radiation, Fire, Cold, Bludgeoning =\
         'slashing', 'radiation', 'fire', 'cold', 'bludgeoning'
 
 ImmuneSystem, Infection = 'Immune System', 'Infection'
-
-def log(*args, **kwargs):
-    kwargs['file'] = sys.stderr
-    print(*args, **kwargs)
-
-log = lambda *args, **kwargs: None
 
 class Group:
     def __init__(self, army, index, size, hit_points, immunities, weaknesses, attack_type, attack_damage, initiative):

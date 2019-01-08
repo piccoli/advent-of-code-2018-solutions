@@ -37,6 +37,7 @@ flowing         = set()
 settled_water   = set()
 parent          = { (500, 0): (None, None) }
 
+# TODO Recursive implementation
 while water_sources:
     solids  = reservoir | settled_water
     sources = sorted(water_sources, reverse = True)
