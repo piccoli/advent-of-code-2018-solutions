@@ -1,16 +1,33 @@
 #! /usr/bin/env python3
 import sys, math
 
+Ground, Trees, Lumberyard = '.|#'
+
+next_state_given = {
+    Ground: lambda count: (Ground, Trees)[
+        count[Trees] > 2
+    ],
+
+    Trees: lambda count: (Trees, Lumberyard)[
+        count[Lumberyard] > 2
+    ],
+
+    Lumberyard:  lambda count: (Ground, Lumberyard)[
+        count[Lumberyard] > 0 and count[Trees] > 0
+    ]
+}
+
 def iterate(area, size, num_iterations = 10):
-    area     = area[:]
-    nexta    = list('.' * size * size)
+    area = area[:]
+    nexta = list(Ground * size * size)
     sequence = [ ''.join(area) ]
-    cache    = { sequence[-1]: 0 }
+    cache = { sequence[0]: 0 }
 
     for i in range(num_iterations):
         for y in range(size):
             for x in range(size):
-                sym = area[y * size + x]
+                acre = area[y * size + x]
+
                 neighbors = (
                     (yn, xn) for (yn, xn) in (
                         (y - 1, x - 1),
@@ -25,17 +42,13 @@ def iterate(area, size, num_iterations = 10):
                     if      yn >= 0 and yn < size\
                         and xn >= 0 and xn < size
                 )
-                count = { '.': 0, '#': 0, '|': 0 }
+
+                count = { Ground: 0, Lumberyard: 0, Trees: 0 }
 
                 for yn, xn in neighbors:
                     count[area[yn * size + xn]] += 1
 
-                if sym == '.':
-                    nexta[y * size + x] = '|' if count['|'] > 2 else '.'
-                elif sym == '|':
-                    nexta[y * size + x] = '#' if count['#'] > 2 else '|'
-                else:
-                    nexta[y * size + x] = '#' if count['#'] > 0 and count['|'] > 0 else '.'
+                nexta[y * size + x] = next_state_given[acre](count)
 
         area, nexta = nexta, area
 
@@ -54,12 +67,12 @@ def iterate(area, size, num_iterations = 10):
     return area
 
 def total_value(area):
-    totals = { '.': 0, '#': 0, '|': 0 }
+    totals = { Ground: 0, Lumberyard: 0, Trees: 0 }
 
-    for sym in area:
-        totals[sym] += 1
+    for acre in area:
+        totals[acre] += 1
 
-    return totals['|'] * totals['#']
+    return totals[Trees] * totals[Lumberyard]
 
 def read_area():
     area = list(sys.stdin.read().replace('\n', '').replace(' ', ''))

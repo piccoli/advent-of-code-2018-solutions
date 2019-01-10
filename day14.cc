@@ -26,10 +26,6 @@ static bool part2_criteria(
 
 static pair<size_t, vector<int>> parse_input(void);
 
-static void print_scoreboard(
-    vector<int> const& scoreboard,
-    int const (&current_recipes)[2]);
-
 int main(void) {
     auto const inputs            = parse_input();
     auto const number_of_recipes = inputs.first;
@@ -79,8 +75,6 @@ static vector<int> cook(
             scoreboard[current_recipes[0]],
             scoreboard[current_recipes[1]]
         };
-
-        //print_scoreboard(scoreboard, current_recipes);
 
         auto const sum = score[0] + score[1];
 
@@ -148,21 +142,4 @@ static pair<size_t, vector<int>> parse_input(void) {
     );
 
     return make_pair(number_of_recipes, target_scores);
-}
-
-static void print_scoreboard(
-    vector<int> const& scoreboard,
-    int const (&current_recipes)[2]) {
-
-    int const n = scoreboard.size();
-
-    for (auto i = 0; i < n; ++i)
-        if (i == current_recipes[0])
-            cout << "(" << scoreboard[i] << ")";
-        else if (i == current_recipes[1])
-            cout << "[" << scoreboard[i] << "]";
-        else
-            cout << " " << scoreboard[i] << " ";
-
-    cout << endl;
 }

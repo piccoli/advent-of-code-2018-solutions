@@ -4,42 +4,6 @@ import re, sys
 import cv2
 import numpy as np
 
-def to_set(pattern):
-    return set(i for i, pot in enumerate(pattern) if pot == '#')
-
-def read_input():
-    initial_state = set()
-    patterns      = set()
-
-    match = None
-    def in_event(pattern, line):
-        nonlocal match
-        match = re.match(pattern, line)
-        return match
-
-    for line in sys.stdin.readlines():
-        if in_event(r'initial state: (.*)', line):
-            initial_state = to_set(match.group(1))
-
-        elif in_event(r'([.#]+) => #', line):
-            patterns.add(match.group(1))
-
-    return initial_state, patterns
-
-def to_pattern(state, i = None, j = None):
-    if len(state) == 0:
-        if i is None or j is None:
-            return ''
-        return '.' * (j - i + 1)
-
-    if i is None: i = min(state)
-    if j is None: j = max(state)
-
-    return ''.join('.#'[k in state] for k in range(i, j + 1))
-
-def trim(state):
-    return re.sub(r'^\.+(.*?)\.+$', r'\1', to_pattern(state))
-
 def evolve(initial_state, patterns):
     min_x = -10
     max_x = 150
@@ -84,6 +48,44 @@ def evolve(initial_state, patterns):
 
     render_frame(num_generations, pat)
     video.release()
+
+def to_pattern(state, i = None, j = None):
+    if len(state) == 0:
+        if i is None or j is None:
+            return ''
+        return '.' * (j - i + 1)
+
+    if i is None: i = min(state)
+    if j is None: j = max(state)
+
+    return ''.join(
+        '.#'[k in state] for k in range(i, j + 1)
+    )
+
+def trim(state):
+    return re.sub(r'^\.+(.*?)\.+$', r'\1', to_pattern(state))
+
+def read_input():
+    initial_state = set()
+    patterns      = set()
+
+    match = None
+    def in_event(pattern, line):
+        nonlocal match
+        match = re.match(pattern, line)
+        return match
+
+    for line in sys.stdin.readlines():
+        if in_event(r'initial state: (.*)', line):
+            initial_state = to_set(match.group(1))
+
+        elif in_event(r'([.#]+) => #', line):
+            patterns.add(match.group(1))
+
+    return initial_state, patterns
+
+def to_set(pattern):
+    return set(i for i, pot in enumerate(pattern) if pot == '#')
 
 initial_state, patterns = read_input()
 

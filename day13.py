@@ -1,8 +1,9 @@
 #! /usr/bin/env python3
 import sys
 
-left, right, straight = range(3)
-next_direction = straight, left, right
+Left, Right, Straight = range(3)
+
+next_direction = Straight, Left, Right
 
 def simulate(diagram, cars):
     while len(cars) > 1:
@@ -50,18 +51,18 @@ def read_diagram():
     }
 
     for y, row in enumerate(diagram):
-        for x, sym in enumerate(row):
-            if sym in direction.keys():
-                row[x] = '-' if sym in '><' else '|'
-                cars[y, x] = (*direction[sym], right)
+        for x, obj in enumerate(row):
+            if obj in direction.keys():
+                row[x] = '-' if obj in '><' else '|'
+                cars[y, x] = (*direction[obj], Right)
 
     return diagram, cars
 
 def turn(dr, dy, dx):
-    if dr == left:
+    if dr == Left:
         if dy == 0: dy, dx = -dx, dy
         else:       dy, dx =  dx, dy
-    elif dr == right:
+    elif dr == Right:
         if dx == 0: dy, dx = dx, -dy
         else:       dy, dx = dx,  dy
 

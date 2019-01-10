@@ -7,26 +7,58 @@ from heapq import *
 
 X, Y, Z, R = range(4)
 
-def in_range(reference, bot):
-    return sum(abs(bot[i] - reference[i]) for i in (X, Y, Z)) <= reference[R]
+Cube = namedtuple('Cube', 'bots_missing size x0 y0 z0')
 
-def read():
-    bots = []
-    for record in map(partial(re.match, r'pos=<(-?\d+),(-?\d+),(-?\d+)>, *r=(\d+)'), sys.stdin.readlines()):
-        x, y, z, r = map(int, record.groups())
+def find_position(nanobots):
+    minx = min(x - r for x, y, z, r in nanobots)
+    miny = min(y - r for x, y, z, r in nanobots)
+    minz = min(z - r for x, y, z, r in nanobots)
+    maxx = max(x + r for x, y, z, r in nanobots)
+    maxy = max(y + r for x, y, z, r in nanobots)
+    maxz = max(z + r for x, y, z, r in nanobots)
 
-        bots.append((x, y, z, r))
+    rangex = maxx - minx
+    rangey = maxy - miny
+    rangez = maxz - minz
 
-    return sorted(bots, reverse = True, key = lambda b: (b[R], b[X], b[Y], b[Z]))
+    # Smallest power of two large enough to cover all nanobots.
+    size = int(math.ceil(math.log2(max(rangex, rangey, rangez))))
+    n = len(nanobots)
 
-# Part 1
-nanobots = read()
+    queue = [ Cube(0, size, minx, miny, minz) ]
 
-bot_with_largest_radius = nanobots[0]
+    while queue:
+        missing, size, x, y, z = heappop(queue)
 
-print(sum(in_range(bot_with_largest_radius, b) for b in nanobots))
+        #in_cube = n - missing
+        #print(size, in_cube)
 
-# Part 2: Octree space partitioning search to the rescue!
+        if size == 0:
+            max_bots = sum(in_range(b, (x, y, z, 0)) for b in nanobots)
+            min_dist = x + y + z
+
+            return min_dist, max_bots
+
+        size -= 1
+
+        s = 2 ** size
+
+        for x0, y0, z0, in (
+            (x    , y    , z    ),
+            (x    , y    , z + s),
+            (x    , y + s, z    ),
+            (x    , y + s, z + s),
+            (x + s, y    , z    ),
+            (x + s, y    , z + s),
+            (x + s, y + s, z    ),
+            (x + s, y + s, z + s)
+            ):
+            cube = Cube(n - bots_in_cube(x0, y0, z0, s), size, x0, y0, z0)
+            heappush(queue, cube)
+
+    # Should not happen
+    return float("+inf"), 0
+
 def bots_in_cube(x0, y0, z0, size):
     '''
     Count how many nanobots are inside or intersect the cube
@@ -71,52 +103,27 @@ def bots_in_cube(x0, y0, z0, size):
         for x, y, z, r in nanobots
     )
 
-Cube = namedtuple('Cube', 'bots_missing size x0 y0 z0')
+def in_range(reference, bot):
+    return sum(abs(bot[i] - reference[i]) for i in (X, Y, Z)) <= reference[R]
 
-minx = min(x - r for x, y, z, r in nanobots)
-miny = min(y - r for x, y, z, r in nanobots)
-minz = min(z - r for x, y, z, r in nanobots)
-maxx = max(x + r for x, y, z, r in nanobots)
-maxy = max(y + r for x, y, z, r in nanobots)
-maxz = max(z + r for x, y, z, r in nanobots)
+def read():
+    bots = []
+    for record in map(partial(re.match, r'pos=<(-?\d+),(-?\d+),(-?\d+)>, *r=(\d+)'), sys.stdin.readlines()):
+        x, y, z, r = map(int, record.groups())
 
-rangex = maxx - minx
-rangey = maxy - miny
-rangez = maxz - minz
+        bots.append((x, y, z, r))
 
-# Smallest power of two large enough to cover all nanobots.
-size = int(math.ceil(math.log2(max(rangex, rangey, rangez))))
-n = len(nanobots)
+    return sorted(bots, reverse = True, key = lambda b: (b[R], b[X], b[Y], b[Z]))
 
-queue = [ Cube(0, size, minx, miny, minz) ]
+# Part 1
+nanobots = read()
 
-while queue:
-    missing, size, x, y, z = heappop(queue)
+bot_with_largest_radius = nanobots[0]
 
-    #in_cube = n - missing
-    #print(size, in_cube)
+print(sum(in_range(bot_with_largest_radius, b) for b in nanobots))
 
-    if size == 0:
-        max_bots = sum(in_range(b, (x, y, z, 0)) for b in nanobots)
-        min_dist = x + y + z
-        break
-
-    size -= 1
-
-    s = 2 ** size
-
-    for x0, y0, z0, in (
-        (x    , y    , z    ),
-        (x    , y    , z + s),
-        (x    , y + s, z    ),
-        (x    , y + s, z + s),
-        (x + s, y    , z    ),
-        (x + s, y    , z + s),
-        (x + s, y + s, z    ),
-        (x + s, y + s, z + s)
-        ):
-        cube = Cube(n - bots_in_cube(x0, y0, z0, s), size, x0, y0, z0)
-        heappush(queue, cube)
+# Part 2: Octree space partitioning search to the rescue!
+min_dist, max_bots = find_position(nanobots)
 
 #print(min_dist, '({} nanobots)'.format(max_bots))
 print(min_dist)

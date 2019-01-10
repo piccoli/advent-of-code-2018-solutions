@@ -5,6 +5,12 @@ from functools import partial
 
 parse_record = partial(re.match, r'\[(\d+)-(\d+)-(\d+) (\d+):(\d+)\] ([^\n]+)')
 
+def sleepiest_guard_minute(table):
+    guard  = max(table,     key = lambda k: max(table[k]))
+    minute = max(range(60), key = lambda m: slept_during[guard][m])
+
+    return guard * minute
+
 def get_stats_from(records):
     start        = 0
     slept_for    = {}
@@ -47,12 +53,6 @@ def parse_records():
         records.append((year, month, day, hour, minute, log))
 
     return records
-
-def sleepiest_guard_minute(table):
-    guard  = max(table,     key = lambda k: max(table[k]))
-    minute = max(range(60), key = lambda m: slept_during[guard][m])
-
-    return guard * minute
 
 records = parse_records()
 

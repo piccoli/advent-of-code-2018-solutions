@@ -1,8 +1,6 @@
 #! /usr/bin/env python3
 import sys
 
-numbers = list(map(int, sys.stdin.read().split()))
-
 def first_duplicate_sum(numbers):
     i = 0
     seen = { 0 }
@@ -17,6 +15,8 @@ def first_duplicate_sum(numbers):
         freq += numbers[i]
 
     return freq
+
+numbers = list(map(int, sys.stdin.read().split()))
 
 print(sum(numbers))
 print(first_duplicate_sum(numbers))

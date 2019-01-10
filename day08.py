@@ -1,4 +1,5 @@
 #! /usr/bin/env python3
+
 class Node:
     def __init__(self, tree):
         self.children = []

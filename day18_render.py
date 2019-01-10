@@ -4,15 +4,31 @@ import sys, math
 import cv2
 import numpy as np
 
+Ground, Trees, Lumberyard = '.|#'
+
+next_state_given = {
+    Ground: lambda count: (Ground, Trees)[
+        count[Trees] > 2
+    ],
+
+    Trees: lambda count: (Trees, Lumberyard)[
+        count[Lumberyard] > 2
+    ],
+
+    Lumberyard:  lambda count: (Ground, Lumberyard)[
+        count[Lumberyard] > 0 and count[Trees] > 0
+    ]
+}
+
 def iterate(area, size, num_iterations = 10, should_render = True):
     if should_render:
         four_cc = cv2.VideoWriter_fourcc(*'MP42')
         video  = cv2.VideoWriter('output.avi', four_cc, 50.0, (size * 8, size * 8))
 
     color = {
-        '.': np.array([ 0  , 81 , 140 ]),
-        '#': np.array([ 255, 116, 42  ]),
-        '|': np.array([ 0  , 210, 0   ])
+        Ground:     np.array([ 0  , 81 , 140 ]),
+        Lumberyard: np.array([ 255, 116, 42  ]),
+        Trees:      np.array([ 0  , 210, 0   ])
     }
 
     def render_frame():
@@ -21,21 +37,22 @@ def iterate(area, size, num_iterations = 10, should_render = True):
         k = 0
         for y in range(size):
             for x in range(size):
-                sym = area[k]
-                im[y * 8:(y + 1) * 8, x * 8:(x + 1) * 8] = color[sym]
+                acre = area[k]
+                im[y * 8:(y + 1) * 8, x * 8:(x + 1) * 8] = color[acre]
                 k += 1
 
         video.write(im)
 
-    area     = area[:]
-    nexta    = list('.' * size * size)
+    area = area[:]
+    nexta = list(Ground * size * size)
     sequence = [ ''.join(area) ]
-    cache    = { sequence[-1]: 0 }
+    cache = { sequence[0]: 0 }
 
     for i in range(num_iterations):
         for y in range(size):
             for x in range(size):
-                sym = area[y * size + x]
+                acre = area[y * size + x]
+
                 neighbors = (
                     (yn, xn) for (yn, xn) in (
                         (y - 1, x - 1),
@@ -50,17 +67,13 @@ def iterate(area, size, num_iterations = 10, should_render = True):
                     if      yn >= 0 and yn < size\
                         and xn >= 0 and xn < size
                 )
-                count = { '.': 0, '#': 0, '|': 0 }
+
+                count = { Ground: 0, Lumberyard: 0, Trees: 0 }
 
                 for yn, xn in neighbors:
                     count[area[yn * size + xn]] += 1
 
-                if sym == '.':
-                    nexta[y * size + x] = '|' if count['|'] > 2 else '.'
-                elif sym == '|':
-                    nexta[y * size + x] = '#' if count['#'] > 2 else '|'
-                else:
-                    nexta[y * size + x] = '#' if count['#'] > 0 and count['|'] > 0 else '.'
+                nexta[y * size + x] = next_state_given[acre](count)
 
         if should_render:
             render_frame()
@@ -91,12 +104,12 @@ def iterate(area, size, num_iterations = 10, should_render = True):
     return area
 
 def total_value(area):
-    totals = { '.': 0, '#': 0, '|': 0 }
+    totals = { Ground: 0, Lumberyard: 0, Trees: 0 }
 
-    for sym in area:
-        totals[sym] += 1
+    for acre in area:
+        totals[acre] += 1
 
-    return totals['|'] * totals['#']
+    return totals[Trees] * totals[Lumberyard]
 
 def read_area():
     area = list(sys.stdin.read().replace('\n', '').replace(' ', ''))

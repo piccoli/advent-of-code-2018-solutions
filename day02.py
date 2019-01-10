@@ -2,9 +2,7 @@
 import sys
 from string import ascii_lowercase
 
-ids = [ s.strip() for s in sys.stdin.read().split() ]
-
-def find_off_by_one_id():
+def find_off_by_one_id(ids):
     seen = set()
 
     for s in ids:
@@ -15,7 +13,7 @@ def find_off_by_one_id():
 
             seen.add((left, right))
 
-def count_two_and_three_occurrences():
+def count_two_and_three_occurrences(ids):
     twos   = 0
     threes = 0
 
@@ -30,5 +28,7 @@ def count_two_and_three_occurrences():
 
     return twos * threes
 
-print(count_two_and_three_occurrences())
-print(find_off_by_one_id())
+ids = [ s.strip() for s in sys.stdin.read().split() ]
+
+print(count_two_and_three_occurrences(ids))
+print(find_off_by_one_id(ids))
