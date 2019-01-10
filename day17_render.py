@@ -139,8 +139,8 @@ reservoir = {
             if y >= scan.y0
 }
 
-total_settled = sum(reservoir[x, y] == Settled for x, y in reservoir)
-total_flowing = sum(reservoir[x, y] == Flowing for x, y in reservoir)
+total_settled = sum(r == Settled for r in reservoir.values())
+total_flowing = sum(r == Flowing for r in reservoir.values())
 
 print(total_settled + total_flowing)
 print(total_settled)
