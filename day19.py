@@ -1,15 +1,17 @@
 #! /usr/bin/env python3
 from elfcode_emulator import *
 
-def loop_limit(register_values, iterations):
+def computed_value(register_values, iterations):
     m = Machine(program_text, register_values)
 
-    for i in range(iterations):
-        regs = next(m)
+    try:
+        for i in range(iterations):
+            regs = next(m)
+    except StopIteration:
+        return regs[0]
 
-    return regs[3]
+    n = regs[3]
 
-def result(n):
     # Translated machine code (from my input at least)
     # boils down to:
     #acc = 0
@@ -23,7 +25,6 @@ def result(n):
 
 program_text = sys.stdin.read()
 
-# This was discovered empirically by actually running the 
-# input Elfcode.
-print(result(loop_limit([ 0, 0, 0, 0, 0, 0 ],     3 * 3)))
-print(result(loop_limit([ 1, 0, 0, 0, 0, 0 ], 1 + 4 * 4)))
+# This was discovered empirically by emulating the input Elfcode.
+print(computed_value([ 0, 0, 0, 0, 0, 0 ],     3 * 3))
+print(computed_value([ 1, 0, 0, 0, 0, 0 ], 1 + 4 * 4))
