@@ -2,58 +2,90 @@
 set -e -o pipefail
 
 main() {
-    local program base_name expected passed=0
+    abort_if_not_installed python3 diff
 
-    check_if_installed python3
     mkdir -p input expected_output
 
-    for day in {01..25}; do
-        program=day$day.py
-
-        if [[ ! -f $program ]]; then
-            warning "$program not found."
-            continue
+    if [[ $# -lt 1 ]]; then
+        test_all
+        return $?
+    else
+        if ! test_day $1; then
+            warning "Program for day '$1' has failed."
+            return 1
+        else
+            log "All tests passed successfully."
+            return 0
         fi
+    fi
+}
 
-        for input_file in input/${day}*; do
-            base_name=$(basename "$input_file")
-            expected=expected_output/$base_name
+test_all() {
+    local passed=0
 
-            if [[ ! -f $expected ]]; then
-                warning "Expected output '$expected' not found."
-                continue
-            fi
-
-            printf "%10s < %-30s" "$program" "$input_file..."
-
-            if identical <(run $day "$input_file") $expected; then
-                pass
-                let ++passed
-            else
-                fail
-            fi
-        done
+    for day in {01..25}; do
+        if test_day $day; then
+            let ++passed
+        fi
     done
 
     if (( passed < 25 )); then
-        abort ""
+        warning "One or more programs failed, see above."
+    else 
+        log "All tests passed successfully."
     fi
+
+    test $passed -eq 25
+}
+
+test_day() {
+    local -r day=$1
+    local -r program=day$day.py
+
+    local program base_name expected failed=0
+
+    if [[ ! -f $program ]]; then
+        warning "$program not found."
+        return 2
+    fi
+
+    for input_file in input/${day}*; do
+        base_name=$(basename "$input_file")
+
+        expected=expected_output/$base_name
+
+        if [[ ! -f $expected ]]; then
+            warning "Expected output file '$expected' not found or not a file."
+            continue
+        fi
+
+        printf "%10s < %-20s" "$program" "$input_file..."
+
+        if identical <(run $day "$input_file") $expected; then
+            pass
+        else
+            fail
+            let ++failed
+        fi
+    done
+
+    test $failed -eq 0
 }
 
 run() {
     local -r day=$1 file=$2
-    local opts=""
+    local options=""
 
     if [[ $file =~ test ]]; then
-        opts+="--test"
+        options+="--test"
     fi
 
-    python3 day$day.py $opts 2>/dev/null < $file || true
+    python3 day$day.py $options 2>/dev/null < $file
 }
 
 identical() {
     local -r file_a=$1 file_b=$2
-    test -z "$(diff -q "$file_a" "$file_b")"
+    diff -q "$file_a" "$file_b" &>/dev/null
 }
 
 pass() {
@@ -64,17 +96,25 @@ fail() {
     printf "%s\n" $(colored FAIL 1)
 }
 
-log() {
-    message 2 Log $@
+abort_if_not_installed() {
+    while [[ $# -gt 0 ]]; do
+        command -v $1 >& /dev/null\
+            || abort "utility '$1' is required, but could not be found in the system. Aborting..."
+        shift
+    done
 }
 
 abort() {
-    warning $@
+    warning "$@"
     exit 1
 }
 
 warning() {
-    message 1 Warning $@
+    message 1 Warning "$@"
+}
+
+log() {
+    message 2 Log "$@"
 }
 
 message() {
@@ -87,7 +127,7 @@ message() {
 
     shift 2
 
-    printf "$prompt$@" >> /dev/stderr
+    printf "$prompt$@\n" >> /dev/stderr
 }
 
 colored() {
@@ -105,12 +145,5 @@ colored() {
     printf "$color$text\e[0m"
 }
 
-check_if_installed() {
-    while [[ $# -gt 0 ]]; do
-        command -v $1 >& /dev/null || abort "utility '$1' is required but could not be found in the system! Quitting..."
-        shift
-    done
-}
-
-main
+main $@
 exit $?
