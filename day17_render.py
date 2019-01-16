@@ -7,52 +7,139 @@ import cv2
 from functools import partial
 from collections import namedtuple, defaultdict
 
+X, Y = range(2)
+
+class VideoRecorder:
+    def __init__(self, scan, source):
+        self.width  = scan.x1 - scan.x0 + 1
+        self.height = 16 * self.width // 9
+
+        four_cc = cv2.VideoWriter_fourcc(*'MP42')
+
+        self.video = cv2.VideoWriter('output.avi', four_cc, 60.0, (self.width, self.height))
+
+        self.velocity = [ 0, 0 ]
+
+        self.position = [
+            source[X] - self.width  // 2,
+            source[Y] - self.height // 2
+        ]
+
+    def render_frame(self, x, y):
+        self.__accelerate_towards(x, y)
+
+        im = np.zeros((self.height, self.width, 3), np.uint8)
+        im[:, :] = EmptyColor
+
+        for object_type, color in zip(
+            (Clay     , Settled     , Flowing  ),
+            (ClayColor, SettledColor, FlowColor)):
+
+            objects = self.__objects_by_window(object_type)
+            self.__render_object(im, objects, color)
+
+        self.video.write(im)
+
+    def __accelerate_towards(self, x, y):
+        vx, vy = self.velocity
+
+        if x < self.position[X] + self.width // 3:
+            self.velocity[X] = max(-5, vx - 2)
+        elif x >= self.position[X] + 2 * self.width // 3:
+            self.velocity[X] = min(5, vx + 2)
+
+        if y < self.position[Y] + self.height // 3:
+            self.velocity[Y] = max(-5, vy - 2)
+        elif y >= self.position[Y] + 2 * self.height // 3:
+            self.velocity[Y] = min(5, vy + 2)
+
+        self.position[X] += int(vx)
+        self.position[Y] += int(vy)
+
+        self.velocity[X] *= .9
+        self.velocity[Y] *= .9
+
+    def __objects_by_window(self, object_type):
+        return [
+            (x, y) for (x, y), t in reservoir.items()
+                if t == object_type
+                    and self.position[X] <= x < self.position[X] + self.width
+                    and self.position[Y] <= y < self.position[Y] + self.height
+        ]
+
+    def __render_object(self, im, obj, color):
+        if not obj:
+            return
+
+        xs, ys = map(np.int32, zip(*obj))
+
+        bounds = (self.position[Y] <= ys) & (ys < self.position[Y] + self.height)\
+               & (self.position[X] <= xs) & (xs < self.position[X] + self.width )
+
+        xs = xs[bounds] - self.position[X]
+        ys = ys[bounds] - self.position[Y]
+
+        im[ys, xs, :] = color
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.video.release()
+
+Source = 500, 0
+
 Area = namedtuple('Area', 'x0 y0 x1 y1')
 
 Empty, Clay, Flowing, Settled = ' #|~'
 Solids = Clay + Settled
 
-ClayColor   = np.array([ 0  , 114, 255 ])
-FlowColor   = np.array([ 255, 231, 212 ])
-WaterColor  = np.array([ 255, 115, 0   ])
-EmptyColor  = np.array([ 0  , 49 , 109 ])
+ClayColor    = np.array([ 0  , 114, 255 ])
+FlowColor    = np.array([ 255, 231, 212 ])
+SettledColor = np.array([ 255, 115, 0   ])
+EmptyColor   = np.array([ 0  , 49 , 109 ])
 
 def fill(x, y):
+    y, stop = flood_down(x, y)
+
+    while not stop:
+        x0, leak_left  = flood_side(x, y, -1)
+        x1, leak_right = flood_side(x, y,  1)
+
+        if leak_left:  fill(x0, y)
+        if leak_right: fill(x1, y)
+
+        stop  = reservoir[x0, y] not in Solids\
+             or reservoir[x1, y] not in Solids
+
+        if not stop:
+            reservoir.update({
+                (x, y): Settled for x in range(x0 + 1, x1)
+            })
+
+            recorder.render_frame(x, y)
+
+            y -= 1
+
+def flood_down(x, y):
     reservoir[x, y] = Flowing
-    render_frame(x, y)
+    recorder.render_frame(x, y)
 
-    if y == scan.y1:
-        return
+    while y < scan.y1 and reservoir[x, y + 1] == Empty:
+        y += 1
+        reservoir[x, y] = Flowing
 
-    if reservoir[x, y + 1] == Empty:
-        fill(x, y + 1)
+    recorder.render_frame(x, y)
 
-    if reservoir[x, y + 1] == Flowing:
-        return
+    return y, y == scan.y1 or reservoir[x, y + 1] == Flowing
 
-    x0 = x - 1
-    while reservoir[x0, y + 1] in Solids\
-        and reservoir[x0, y] not in Solids:
-        reservoir[x0, y] = Flowing
-        x0 -= 1
+def flood_side(x, y, dx):
+    xi = x
+    while reservoir[xi, y + 1] in Solids and reservoir[xi, y] not in Solids:
+        reservoir[xi, y] = Flowing
+        xi += dx
 
-    x1 = x + 1
-    while reservoir[x1, y + 1] in Solids\
-        and reservoir[x1, y] not in Solids:
-        reservoir[x1, y] = Flowing
-        x1 += 1
-
-    if reservoir[x0, y] == Empty:
-        fill(x0, y)
-
-    if reservoir[x1, y] == Empty:
-        fill(x1, y)
-
-    if reservoir[x0, y] in Solids and reservoir[x1, y] in Solids:
-        reservoir.update({
-            (x, y): Settled for x in range(x0 + 1, x1)
-        })
-        render_frame(x, y)
+    return xi, reservoir[xi, y] == Empty
 
 def read():
     reservoir = defaultdict(lambda: Empty)
@@ -79,59 +166,10 @@ def read():
 
     return reservoir, area
 
-def render_frame(x, y):
-    clay    = [ (x, y) for (x, y), t in reservoir.items() if t == Clay    ]
-    settled = [ (x, y) for (x, y), t in reservoir.items() if t == Settled ]
-    flowing = [ (x, y) for (x, y), t in reservoir.items() if t == Flowing ]
-
-
-    x1 = x + size // 2 - 1
-    x0 = x1 - size
-    y1 = y + size // 10 - 1
-    y0 = y1 - size
-
-    window = Area(
-        x0 = x0,
-        y0 = y0,
-        x1 = x1,
-        y1 = y1
-    )
-
-    im = np.zeros((size, size, 3), np.uint8)
-    im[:, :] = EmptyColor
-
-    render_object(im, window, clay   , ClayColor )
-    render_object(im, window, settled, WaterColor)
-    render_object(im, window, flowing, FlowColor )
-
-    video.write(im)
-
-def render_object(im, window, obj, color):
-    if not obj:
-        return
-
-    xs, ys = map(np.int32, zip(*obj))
-
-    bounds = (window.y0 <= ys) & (ys < window.y1)\
-           & (window.x0 <= xs) & (xs < window.x1)
-
-    xs = xs[bounds] - window.x0
-    ys = ys[bounds] - window.y0
-
-    im[ys, xs, :] = color
-
 reservoir, scan = read()
 
-max_water = (scan.y1 - scan.y0 + 1) * (scan.x1 - scan.x0 + 1)
-sys.setrecursionlimit(max_water)
-
-size    = scan.x1 - scan.x0 + 1
-four_cc = cv2.VideoWriter_fourcc(*'MP42')
-video   = cv2.VideoWriter('output.avi', four_cc, 60.0, (size, size))
-
-fill(500, 0)
-
-video.release()
+with VideoRecorder(scan, Source) as recorder:
+    fill(*Source)
 
 reservoir = {
     (x, y): reservoir[x, y]

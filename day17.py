@@ -4,45 +4,49 @@ import sys, re
 from functools import partial
 from collections import namedtuple, defaultdict
 
+Source = 500, 0
+
 Area = namedtuple('Area', 'x0 y0 x1 y1')
 
 Empty, Clay, Flowing, Settled = ' #|~'
 Solids = Clay + Settled
 
 def fill(x, y):
+    y, stop = flood_down(x, y)
+
+    while not stop:
+        x0, leak_left  = flood_side(x, y, -1)
+        x1, leak_right = flood_side(x, y,  1)
+
+        if leak_left:  fill(x0, y)
+        if leak_right: fill(x1, y)
+
+        stop  = reservoir[x0, y] not in Solids\
+             or reservoir[x1, y] not in Solids
+
+        if not stop:
+            reservoir.update({
+                (x, y): Settled for x in range(x0 + 1, x1)
+            })
+
+            y -= 1
+
+def flood_down(x, y):
     reservoir[x, y] = Flowing
 
-    if y == scan.y1:
-        return
+    while y < scan.y1 and reservoir[x, y + 1] == Empty:
+        y += 1
+        reservoir[x, y] = Flowing
 
-    if reservoir[x, y + 1] == Empty:
-        fill(x, y + 1)
+    return y, y == scan.y1 or reservoir[x, y + 1] == Flowing
 
-    if reservoir[x, y + 1] == Flowing:
-        return
+def flood_side(x, y, dx):
+    xi = x
+    while reservoir[xi, y + 1] in Solids and reservoir[xi, y] not in Solids:
+        reservoir[xi, y] = Flowing
+        xi += dx
 
-    x0 = x - 1
-    while reservoir[x0, y + 1] in Solids\
-        and reservoir[x0, y] not in Solids:
-        reservoir[x0, y] = Flowing
-        x0 -= 1
-
-    x1 = x + 1
-    while reservoir[x1, y + 1] in Solids\
-        and reservoir[x1, y] not in Solids:
-        reservoir[x1, y] = Flowing
-        x1 += 1
-
-    if reservoir[x0, y] == Empty:
-        fill(x0, y)
-
-    if reservoir[x1, y] == Empty:
-        fill(x1, y)
-
-    if reservoir[x0, y] in Solids and reservoir[x1, y] in Solids:
-        reservoir.update({
-            (x, y): Settled for x in range(x0 + 1, x1)
-        })
+    return xi, reservoir[xi, y] == Empty
 
 def read():
     reservoir = defaultdict(lambda: Empty)
@@ -71,10 +75,7 @@ def read():
 
 reservoir, scan = read()
 
-max_water = (scan.y1 - scan.y0 + 1) * (scan.x1 - scan.x0 + 1)
-sys.setrecursionlimit(max_water)
-
-fill(500, 0)
+fill(*Source)
 
 reservoir = {
     (x, y): reservoir[x, y]
