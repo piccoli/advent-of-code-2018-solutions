@@ -11,15 +11,15 @@ Area = namedtuple('Area', 'x0 y0 x1 y1')
 Empty, Clay, Flowing, Settled = ' #|~'
 Solids = Clay + Settled
 
-def fill(x, y):
+def flood(x, y):
     y, stop = flood_down(x, y)
 
     while not stop:
         x0, leak_left  = flood_side(x, y, -1)
         x1, leak_right = flood_side(x, y,  1)
 
-        if leak_left:  fill(x0, y)
-        if leak_right: fill(x1, y)
+        if leak_left:  flood(x0, y)
+        if leak_right: flood(x1, y)
 
         stop  = reservoir[x0, y] not in Solids\
              or reservoir[x1, y] not in Solids
@@ -75,7 +75,7 @@ def read():
 
 reservoir, scan = read()
 
-fill(*Source)
+flood(*Source)
 
 reservoir = {
     (x, y): reservoir[x, y]

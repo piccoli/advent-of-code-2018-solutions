@@ -99,15 +99,15 @@ FlowColor    = np.array([ 255, 231, 212 ])
 SettledColor = np.array([ 255, 115, 0   ])
 EmptyColor   = np.array([ 0  , 49 , 109 ])
 
-def fill(x, y):
+def flood(x, y):
     y, stop = flood_down(x, y)
 
     while not stop:
         x0, leak_left  = flood_side(x, y, -1)
         x1, leak_right = flood_side(x, y,  1)
 
-        if leak_left:  fill(x0, y)
-        if leak_right: fill(x1, y)
+        if leak_left:  flood(x0, y)
+        if leak_right: flood(x1, y)
 
         stop  = reservoir[x0, y] not in Solids\
              or reservoir[x1, y] not in Solids
@@ -169,7 +169,7 @@ def read():
 reservoir, scan = read()
 
 with VideoRecorder(scan, Source) as recorder:
-    fill(*Source)
+    flood(*Source)
 
 reservoir = {
     (x, y): reservoir[x, y]
