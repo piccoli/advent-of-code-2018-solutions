@@ -76,13 +76,10 @@ def possible_actions_from(state):
             and tool in AllowedToolsForRegion[region_type(xn, yn)]
     )
 
-    other_tools = [
-        t for t in { ClimbingGear, Torch, Neither } - { tool }
-        if t in AllowedToolsForRegion[region_type(x, y)]
-    ]
-
     for xn, yn in neighbors:
         yield 1, State(xn, yn, tool)
+
+    other_tools = AllowedToolsForRegion[region_type(x, y)] - { tool }
 
     for next_tool in other_tools:
         yield 7, State(x, y, next_tool)
